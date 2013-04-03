@@ -83,11 +83,11 @@ func initDatastore(configFilename, outputDir string) (uuidStr string) {
 func runCommand(args ...string) {
 	cmd := exec.Command(args[0], args[1:]...)
 	out, err := cmd.Output()
-	if err != nil {
-		log.Fatal(err)
-	}
 	if len(out) > 0 {
 		fmt.Println(string(out))
+	}
+	if err != nil {
+		log.Fatal(err)
 	}
 }
 
@@ -139,6 +139,9 @@ func main() {
 	fmt.Println("Making sure DVID server has started...")
 	time.Sleep(3 * time.Second)
 
+	// Shutdown the server no matter how we exit
+	defer runCommand("dvid", "shutdown")
+
 	// Create dataset for grayscale
 	runCommand("dvid", "dataset", "grayscale", "grayscale8")
 
@@ -188,7 +191,4 @@ func main() {
 		}
 		fmt.Printf("Added %d label tiles from z = %d...\n", numTiles, z)
 	}
-
-	// Shutdown the server
-	runCommand("dvid", "shutdown")
 }

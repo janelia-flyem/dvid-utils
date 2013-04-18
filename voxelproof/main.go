@@ -23,6 +23,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -80,15 +81,19 @@ func initDatastore(configFilename, outputDir string) (uuidStr string) {
 	return
 }
 
-func runCommand(args ...string) {
+func runCommand(args ...string) (err error) {
 	cmd := exec.Command(args[0], args[1:]...)
 	out, err := cmd.Output()
 	if len(out) > 0 {
 		fmt.Println(string(out))
 	}
-	if err != nil {
-		log.Fatal(err)
-	}
+	return
+}
+
+func runAsyncCommand(args ...string) (err error) {
+	cmd := exec.Command(args[0], args[1:]...)
+	err = cmd.Start()
+	return
 }
 
 func main() {
@@ -113,7 +118,7 @@ func main() {
 	configFilename := args[3]
 	outputDir := args[4]
 
-	fmt.Println("VoxelProof data direcory:", voxelProofDir)
+	fmt.Println("VoxelProof data directory:", voxelProofDir)
 	zrange, err := dvid.PointStr(zrangeStr).Point2d()
 	if err != nil {
 		log.Fatal(err)
@@ -142,6 +147,17 @@ func main() {
 	// Shutdown the server no matter how we exit
 	defer runCommand("dvid", "shutdown")
 
+	// Capture ctrl+c and handle graceful shutdown (flushing of cache, etc.)
+	ctrl_c := make(chan os.Signal, 1)
+	go func() {
+		for sig := range ctrl_c {
+			log.Printf("Captured %v.  Shutting down...\n", sig)
+			runCommand("dvid", "shutdown")
+			os.Exit(0)
+		}
+	}()
+	signal.Notify(ctrl_c, os.Interrupt)
+
 	// Create dataset for grayscale
 	runCommand("dvid", "dataset", "grayscale", "grayscale8")
 
@@ -169,7 +185,11 @@ func main() {
 				oy := y * tileSize[1]
 				oz := z - zrange[0]
 				offsetStr := fmt.Sprintf("%d,%d,%d", ox, oy, oz)
-				runCommand("dvid", "grayscale", "server-add", uuidStr, offsetStr, tilepath)
+				err = runCommand("dvid", "grayscale", "server-add",
+					uuidStr, offsetStr, tilepath)
+				if err != nil {
+					log.Fatalf("Error in command: %s\n", err.Error())
+				}
 			}
 		}
 		fmt.Printf("Added %d grayscale tiles from z = %d...\n", numTiles, z)
@@ -186,7 +206,11 @@ func main() {
 				oy := y * tileSize[1]
 				oz := z - zrange[0]
 				offsetStr := fmt.Sprintf("%d,%d,%d", ox, oy, oz)
-				runCommand("dvid", "labels", "server-add", uuidStr, offsetStr, tilepath)
+				err = runCommand("dvid", "labels", "server-add",
+					uuidStr, offsetStr, tilepath)
+				if err != nil {
+					log.Fatalf("Error in command: %s\n", err.Error())
+				}
 			}
 		}
 		fmt.Printf("Added %d label tiles from z = %d...\n", numTiles, z)

@@ -1,0 +1,13 @@
+{
+    "VolumeMax": [
+        12000,
+        12000,
+        1300
+    ],
+    "VoxelRes": [
+        3.1,
+        3.1,
+        40.0
+    ],
+    "VoxelResUnits": "nanometers"
+}

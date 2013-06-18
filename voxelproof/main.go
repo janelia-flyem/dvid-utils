@@ -39,14 +39,13 @@ var (
 const helpMessage = `
 %s creates a DVID database from a VoxelProof data directory.
 
-Usage: %s [options] <VoxelProof path> <z range> <tile size> <config json path> <output db path>
+Usage: %s [options] <VoxelProof path> <z range> <tile size> <output db path>
 
   -h, -help       (flag)    Show help message
 
 <VoxelProof path>       Path to VoxelProof data directory.
 <z range>               Range of z slices in "zmin,zmax" format, e.g., "0,619" for z = 0 to 619.
 <tile size>             Size of tile in "width,height" format, e.g., "100,100" for 100x100.
-<config json path>      JSON file used to configure DVID volume via "dvid init".
 <output db path>        Path to output DVID datastore directory to create.
 `
 
@@ -55,8 +54,8 @@ var usage = func() {
 	fmt.Printf(helpMessage, programName, programName)
 }
 
-func initDatastore(configFilename, outputDir string) (uuidStr string) {
-	cmd := exec.Command("dvid", "init", "config="+configFilename, "dir="+outputDir)
+func initDatastore(outputDir string) (uuidStr string) {
+	cmd := exec.Command("dvid", "init", "dir="+outputDir)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		log.Fatal(err)
@@ -108,15 +107,14 @@ func main() {
 
 	// Get required arguments
 	args := flag.Args()
-	if len(args) < 4 {
+	if len(args) < 3 {
 		usage()
 		os.Exit(2)
 	}
 	voxelProofDir := args[0]
 	zrangeStr := args[1]
 	tileSizeStr := args[2]
-	configFilename := args[3]
-	outputDir := args[4]
+	outputDir := args[3]
 
 	fmt.Println("VoxelProof data directory:", voxelProofDir)
 	zrange, err := dvid.PointStr(zrangeStr).Point2d()
@@ -129,11 +127,10 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Printf("Tile size: %d x %d pixels\n", tileSize[0], tileSize[1])
-	fmt.Println("Configuration JSON file:", configFilename)
 	fmt.Println("Output DVID database:", outputDir)
 
 	// Initialize the database
-	uuidStr := initDatastore(configFilename, outputDir)
+	uuidStr := initDatastore(outputDir)
 	fmt.Printf("Initialized datastore with root version %s.\n", uuidStr)
 
 	// Startup a server for this new datastore.  It will exit when this program exits.
@@ -164,15 +161,10 @@ func main() {
 	// Create dataset for labels
 	runCommand("dvid", "dataset", "labels", "labels32")
 
-	// Read in the DVID volume configuration.
-	vol, err := dvid.ReadVolumeJSON(configFilename)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	// Add grayscale
-	tileXMax := vol.VolumeMax[0] / tileSize[0]
-	tileYMax := vol.VolumeMax[1] / tileSize[1]
+    vol := dvid.VoxelCoord{700, 700, 620}
+	tileXMax := vol[0] / tileSize[0]
+	tileYMax := vol[1] / tileSize[1]
 	fmt.Printf("X Tiles from [0,%d), Y Tiles from [0,%d)\n", tileXMax, tileYMax)
 
 	numTiles := tileXMax * tileYMax

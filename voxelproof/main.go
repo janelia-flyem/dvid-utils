@@ -55,7 +55,7 @@ var usage = func() {
 }
 
 func initDatastore(outputDir string) (uuidStr string) {
-	cmd := exec.Command("dvid", "init", "dir="+outputDir)
+	cmd := exec.Command("dvid", "-datastore="+outputDir, "init")
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		log.Fatal(err)
@@ -134,7 +134,7 @@ func main() {
 	fmt.Printf("Initialized datastore with root version %s.\n", uuidStr)
 
 	// Startup a server for this new datastore.  It will exit when this program exits.
-	cmd := exec.Command("dvid", "serve", "dir="+outputDir)
+	cmd := exec.Command("dvid", "-datastore="+outputDir, "serve")
 	if err := cmd.Start(); err != nil {
 		log.Fatal(err)
 	}
@@ -162,7 +162,7 @@ func main() {
 	runCommand("dvid", "dataset", "labels", "labels32")
 
 	// Add grayscale
-    vol := dvid.VoxelCoord{700, 700, 620}
+	vol := dvid.VoxelCoord{700, 700, 620}
 	tileXMax := vol[0] / tileSize[0]
 	tileYMax := vol[1] / tileSize[1]
 	fmt.Printf("X Tiles from [0,%d), Y Tiles from [0,%d)\n", tileXMax, tileYMax)

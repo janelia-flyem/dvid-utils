@@ -171,7 +171,7 @@ func main() {
 	for z := zrange[0]; z <= zrange[1]; z++ {
 		for y := int32(0); y < tileYMax; y++ {
 			for x := int32(0); x < tileXMax; x++ {
-				fname := fmt.Sprintf("%d-%d.jpg", y, x)
+				fname := fmt.Sprintf("%d-%d.png", y, x)
 				tilepath := filepath.Join(voxelProofDir, "z", strconv.Itoa(int(z)), fname)
 				ox := x * tileSize[0]
 				oy := y * tileSize[1]
